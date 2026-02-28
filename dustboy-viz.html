@@ -495,13 +495,15 @@
         function updateTable(data, source) {
             const tbody = document.getElementById('table-body');
             const color = getColor(data.pm25);
-            const id = `row-${data.id || data.nickname.replace(/\s/g, '-')}`;
+            // Use ID if available, otherwise slugify the nickname
+            const stationKey = (data.id || data.nickname).toString().replace(/[^\w-]/g, '-');
+            const rowId = `row-${stationKey}`;
 
-            let row = document.getElementById(id);
+            let row = document.getElementById(rowId);
             const rowContent = `
-                <td><div style="width:8px; height:8px; border-radius:50%; background:${color.css};"></div></td>
+                <td><div style="width:8px; height:8px; border-radius:50%; background:${color.css}; shadow: 0 0 5px ${color.css}"></div></td>
                 <td style="font-weight:600;">${data.nickname}</td>
-                <td style="opacity:0.6;">${data.area || 'N/A'}</td>
+                <td style="opacity:0.6;">${data.area || 'Thailand'}</td>
                 <td style="font-family:'Orbitron'; font-weight:700; color:${color.css}">${data.pm25}</td>
                 <td><span class="badge" style="background:${color.css}33; color:${color.css}; border:1px solid ${color.css}66;">${color.label}</span></td>
                 <td style="opacity:0.5;">${new Date().toLocaleTimeString()}</td>
@@ -510,10 +512,11 @@
 
             if (!row) {
                 row = document.createElement('tr');
-                row.id = id;
+                row.id = rowId;
                 row.innerHTML = rowContent;
                 tbody.prepend(row);
-                if (tbody.children.length > 100) tbody.lastChild.remove();
+                // Keep table manageable but large enough for all simulated points
+                if (tbody.children.length > 150) tbody.lastChild.remove();
             } else {
                 row.innerHTML = rowContent;
             }
