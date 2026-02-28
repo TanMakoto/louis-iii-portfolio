@@ -127,16 +127,16 @@
 
         // --- Configuration ---
         const CSV_URL = 'travel-phitsanulok.csv?v=1.0.4';
-        const SCALE = 100000; // Earth scale to scene units
+        const SCALE = 20000; // Condensed scale (5x smaller than v1.0.8)
 
         let scene, camera, renderer, train, track;
         let points = [];
         let waypoints = [];
         let currentIndex = 0;
         let speed = 0;
-        let maxSpeed = 0.25; // Balanced high speed
+        let maxSpeed = 0.5; // High speed for condensed map
         let isRunning = false;
-        let keys = { w: false, s: false }; // Track key states
+        let keys = { w: false, s: false };
         let viewMode = 'follow'; // 'follow' or 'cockpit'
 
         // UI elements
@@ -499,14 +499,14 @@
 
             // Handle Real-time Controls (W / S)
             if (keys.w) {
-                speed = Math.min(speed + 0.001, maxSpeed); // Smooth acceleration
+                speed = Math.min(speed + 0.005, maxSpeed); // Faster accel for smaller map
                 if (!isRunning && speed > 0) {
                     isRunning = true;
                     updateStartButtonUI();
                 }
             }
             if (keys.s) {
-                speed = Math.max(speed - 0.002, 0); // Smooth braking
+                speed = Math.max(speed - 0.01, 0); // Quicker braking
             }
 
             if (isRunning && currentIndex < points.length - 1) {
