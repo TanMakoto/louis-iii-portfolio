@@ -549,10 +549,12 @@
 
         async function fetchOfficial() {
             try {
+                logToHUD("REQU: SYNCING OFFICIAL GOVERNMENT DATA...");
                 const res = await fetch('https://pm25.gistda.or.th/rest/getPollution');
                 const json = await res.json();
                 if (json && json.stations) {
-                    json.stations.forEach(s => {
+                    logToHUD("SUCC: OFFICIAL DATA SYNCED");
+                    json.stations.forEach((s, i) => {
                         const pm25 = parseFloat(s.AQILast?.PM25?.value || 0);
                         const normalized = {
                             id: s.stationID,
@@ -562,9 +564,17 @@
                         };
                         update3DNode(normalized, 'official');
                         updateTable(normalized, 'Air4Thai');
+
+                        // AUTO-SELECT first official station as focal point if still awaiting data
+                        if (i === 0 && document.getElementById('focal-name').textContent.includes('Awaiting')) {
+                            updateFocalStation(normalized, 'Official');
+                        }
                     });
                 }
-            } catch (e) { logToHUD("WARN: GISTDA API SYNC FAILED (CORS)"); simulateOfficial(); }
+            } catch (e) {
+                logToHUD("WARN: PROXY BLOCKED SYNC (CORS)");
+                simulateOfficial();
+            }
         }
 
         function simulateOfficial() {
@@ -577,6 +587,11 @@
                 const data = { ...s, id: 'sim-' + i };
                 update3DNode(data, 'official');
                 updateTable(data, 'GISTDA');
+
+                // Set as focal if empty
+                if (i === 0 && document.getElementById('focal-name').textContent.includes('Awaiting')) {
+                    updateFocalStation(data, 'Simulated');
+                }
             });
         }
 
