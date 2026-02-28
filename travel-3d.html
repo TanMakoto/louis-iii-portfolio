@@ -96,13 +96,18 @@
         <div id="speedometer">Speed: <span class="stat" id="speed-text">0</span> <small>km/h</small></div>
         <div style="margin-top:10px; font-size:0.8rem; color:#94a3b8;">
             [W] Accelerate | [S] Brake | [C] Camera
-            <br><span style="font-size: 0.6rem; opacity: 0.8; color: #39c5bb;">v1.0.5 - Environment & Movement
+            <br><span style="font-size: 0.6rem; opacity: 0.9; color: #39c5bb;">v1.0.6 - Full Control & Mega Nature
                 Patch</span>
         </div>
+    </div>
     </div>
 
     <div class="controls">
         <button class="btn" id="start-btn">ENGAGE ENGINE</button>
+        <button class="btn" id="accel-btn" style="background: rgba(34, 197, 94, 0.2); border-color: #22c55e;">ACCEL
+            [W]</button>
+        <button class="btn" id="brake-btn" style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444;">BRAKE
+            [S]</button>
         <button class="btn" id="cam-btn">SWITCH VIEW</button>
         <button class="btn" id="upload-btn" style="border-color: #39c5bb; color: #39c5bb;">UPLOAD KML 🛰️</button>
         <input type="file" id="kml-input" accept=".kml" style="display: none;">
@@ -138,6 +143,8 @@
         const locId = document.getElementById('loc-text');
         const speedId = document.getElementById('speed-text');
         const startBtn = document.getElementById('start-btn');
+        const accelBtn = document.getElementById('accel-btn');
+        const brakeBtn = document.getElementById('brake-btn');
         const camBtn = document.getElementById('cam-btn');
         const uploadBtn = document.getElementById('upload-btn');
         const kmlInput = document.getElementById('kml-input');
@@ -206,6 +213,15 @@
                     startBtn.textContent = isRunning ? "STOP ENGINE" : "ENGAGE ENGINE";
                     startBtn.style.background = isRunning ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.2)";
                     startBtn.style.borderColor = isRunning ? "#ef4444" : "#38bdf8";
+                });
+
+                accelBtn.addEventListener('click', () => {
+                    speed = Math.min(speed + 0.01, maxSpeed);
+                    if (!isRunning) startBtn.click(); // Auto-start if accelerating
+                });
+
+                brakeBtn.addEventListener('click', () => {
+                    speed = Math.max(speed - 0.01, 0);
                 });
 
                 camBtn.addEventListener('click', () => {
@@ -314,18 +330,23 @@
             ground.position.y = -0.51;
             scene.add(ground);
 
-            // Distant Hills
-            for (let i = 0; i < 40; i++) {
-                const hillGeo = new THREE.SphereGeometry(20 + Math.random() * 60, 32, 16);
-                const hillMat = new THREE.MeshStandardMaterial({ color: 0x0a1a0a });
+            // Distant Hills - MEGA SIZE
+            for (let i = 0; i < 60; i++) {
+                const hillHeight = 50 + Math.random() * 150;
+                const hillGeo = new THREE.SphereGeometry(30 + Math.random() * 100, 32, 16);
+                const hillMat = new THREE.MeshStandardMaterial({
+                    color: 0x0a1f0a,
+                    flatShading: true
+                });
                 const hill = new THREE.Mesh(hillGeo, hillMat);
 
                 const angle = Math.random() * Math.PI * 2;
-                const dist = 400 + Math.random() * 1000;
-                hill.position.set(Math.cos(angle) * dist, -5, Math.sin(angle) * dist);
-                hill.scale.y = 0.2;
+                const dist = 500 + Math.random() * 1500;
+                hill.position.set(Math.cos(angle) * dist, -10, Math.sin(angle) * dist);
+                hill.scale.y = 0.5;
                 scene.add(hill);
             }
+            console.log("Environment: 60 Hills spawned.");
         }
 
         function spawnTreesAlongRoute() {
@@ -338,31 +359,32 @@
             const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f });
             const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1a4a1a });
 
-            // Spawn trees every few points
-            for (let i = 0; i < points.length; i += 3) {
+            // Spawn trees every few points - MEGA DENSE
+            for (let i = 0; i < points.length; i += 2) {
                 const pos = points[i];
-                for (let j = 0; j < 2; j++) {
+                for (let j = 0; j < 4; j++) {
                     const tree = new THREE.Group();
 
                     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 1;
+                    trunk.position.y = 1.5;
                     tree.add(trunk);
 
                     const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-                    leaves.position.y = 3;
+                    leaves.position.y = 4.5;
                     tree.add(leaves);
 
-                    const offsetX = (Math.random() - 0.5) * 60;
-                    const offsetZ = (Math.random() - 0.5) * 60;
+                    const offsetX = (Math.random() - 0.5) * 100;
+                    const offsetZ = (Math.random() - 0.5) * 100;
 
-                    if (Math.abs(offsetX) < 8) continue; // Don't block track
+                    if (Math.abs(offsetX) < 12) continue; // Don't block track
 
                     tree.position.set(pos.x + offsetX, -0.5, pos.z + offsetZ);
-                    tree.scale.setScalar(1 + Math.random() * 4); // MUCH larger trees
+                    tree.scale.setScalar(2 + Math.random() * 6); // MEGA TREES
                     treeGroup.add(tree);
                 }
             }
             scene.add(treeGroup);
+            console.log("Environment: Dense forest spawned.");
         }
 
         async function loadGPSData() {
