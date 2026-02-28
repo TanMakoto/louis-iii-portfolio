@@ -96,7 +96,8 @@
         <div id="speedometer">Speed: <span class="stat" id="speed-text">0</span> <small>km/h</small></div>
         <div style="margin-top:10px; font-size:0.8rem; color:#94a3b8;">
             [W] Accelerate | [S] Brake | [C] Camera
-            <br><span style="font-size: 0.6rem; opacity: 0.5;">v1.0.4 - Linked to travel-phitsanulok.csv</span>
+            <br><span style="font-size: 0.6rem; opacity: 0.8; color: #39c5bb;">v1.0.5 - Environment & Movement
+                Patch</span>
         </div>
     </div>
 
@@ -145,8 +146,8 @@
             try {
                 // Scene Setup
                 scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x050610);
-                scene.fog = new THREE.FogExp2(0x050610, 0.002);
+                scene.background = new THREE.Color(0x0a0b1a); // Slightly lighter night sky
+                scene.fog = new THREE.FogExp2(0x0a0b1a, 0.001); // Thinner fog for better visibility
 
                 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
                 camera.position.set(0, 10, 20); // Fallback position
@@ -157,11 +158,15 @@
                 document.body.appendChild(renderer.domElement);
 
                 // Lights
-                const ambientLight = new THREE.AmbientLight(0x404040, 2);
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Stronger ambient
                 scene.add(ambientLight);
 
-                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x050610, 2);
+                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x1a2e1a, 1);
                 scene.add(hemiLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                directionalLight.position.set(100, 200, 100);
+                scene.add(directionalLight);
 
                 // Environmental Setup
                 createEnvironment();
@@ -462,14 +467,16 @@
                 // Rotate train to look at target
                 train.lookAt(target);
 
-                // UI Updates
                 const dist = train.position.distanceTo(target);
                 if (dist < 0.5) {
                     currentIndex++;
                 }
+            }
 
-                locId.textContent = waypoints[currentIndex].locality || "Deep North";
-                speedId.textContent = (speed * 1000).toFixed(0);
+            // Continuous UI Update
+            if (waypoints.length > 0) {
+                locId.textContent = waypoints[currentIndex]?.locality || "Unknown District";
+                speedId.textContent = (speed * 1000 * (isRunning ? 1 : 0)).toFixed(0);
             }
 
             // Camera Logic
