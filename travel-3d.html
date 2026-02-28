@@ -127,14 +127,14 @@
 
         // --- Configuration ---
         const CSV_URL = 'travel-phitsanulok.csv?v=1.0.4';
-        const SCALE = 20000; // Condensed scale (5x smaller than v1.0.8)
+        const SCALE = 5000; // Ultra Condensed (4x smaller than v1.0.9)
 
         let scene, camera, renderer, train, track;
         let points = [];
         let waypoints = [];
         let currentIndex = 0;
         let speed = 0;
-        let maxSpeed = 0.5; // High speed for condensed map
+        let maxSpeed = 0.5; // Represents 500 km/h
         let isRunning = false;
         let keys = { w: false, s: false };
         let viewMode = 'follow'; // 'follow' or 'cockpit'
@@ -369,36 +369,27 @@
         }
 
         function spawnTreesAlongRoute() {
-            const treeGroup = new THREE.Group();
-            treeGroup.name = "nature";
-
-            // Shared geometry for performance
-            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
-            const leavesGeo = new THREE.ConeGeometry(1.5, 4, 8);
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f });
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1a4a1a });
-
-            // Spawn trees every few points - MEGA DENSE
+            // Spawn trees every few points - ULTRA DENSE
             for (let i = 0; i < points.length; i += 2) {
                 const pos = points[i];
-                for (let j = 0; j < 4; j++) {
+                for (let j = 0; j < 2; j++) {
                     const tree = new THREE.Group();
 
                     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 1.5;
+                    trunk.position.y = 1;
                     tree.add(trunk);
 
                     const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-                    leaves.position.y = 4.5;
+                    leaves.position.y = 3;
                     tree.add(leaves);
 
-                    const offsetX = (Math.random() - 0.5) * 100;
-                    const offsetZ = (Math.random() - 0.5) * 100;
+                    const offsetX = (Math.random() - 0.5) * 40;
+                    const offsetZ = (Math.random() - 0.5) * 40;
 
-                    if (Math.abs(offsetX) < 12) continue; // Don't block track
+                    if (Math.abs(offsetX) < 6) continue;
 
                     tree.position.set(pos.x + offsetX, -0.5, pos.z + offsetZ);
-                    tree.scale.setScalar(2 + Math.random() * 6); // MEGA TREES
+                    tree.scale.setScalar(1 + Math.random() * 3);
                     treeGroup.add(tree);
                 }
             }
@@ -499,14 +490,14 @@
 
             // Handle Real-time Controls (W / S)
             if (keys.w) {
-                speed = Math.min(speed + 0.005, maxSpeed); // Faster accel for smaller map
+                speed = Math.min(speed + 0.01, maxSpeed); // Intense acceleration
                 if (!isRunning && speed > 0) {
                     isRunning = true;
                     updateStartButtonUI();
                 }
             }
             if (keys.s) {
-                speed = Math.max(speed - 0.01, 0); // Quicker braking
+                speed = Math.max(speed - 0.02, 0); // Aggressive braking
             }
 
             if (isRunning && currentIndex < points.length - 1) {
