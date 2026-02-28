@@ -327,7 +327,7 @@
         <div id="canvas-container"></div>
         <div
             style="position: absolute; top: 20px; left: 20px; z-index: 20; color: var(--accent); font-size: 0.6rem; font-family: 'Orbitron';">
-            DATA NEXUS RELAY v3.2 // DUAL SOURCE PROTOCOL (Orbit Locked)
+            DATA NEXUS RELAY v3.2.1 // DUAL SOURCE PROTOCOL (Orbit Locked)
         </div>
     </div>
 
@@ -416,14 +416,15 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
 
-        camera.position.z = 18;
+        camera.position.z = 25; // Zoom out a bit initially
 
+        // Ensure THREE is globally available for the example script or use the locally defined one
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.enablePan = true;
+        controls.screenSpacePanning = true;
         controls.minDistance = 5;
-        controls.maxDistance = 60;
+        controls.maxDistance = 100;
 
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
