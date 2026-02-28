@@ -526,34 +526,43 @@
         client.on('connect', () => {
             client.subscribe('DUSTBOY/+/+/+/status');
             logToHUD("SUCCESS: MQTT CONNECTION ESTABLISHED");
+            logToHUD("REF: ALIGNED WITH SOUL-BREWS-STUDIO PROTOCOL");
         });
 
         client.on('message', (topic, message) => {
             try {
-                const data = JSON.parse(message.toString());
-                const pm25 = parseFloat(data.pm25 || data.db_pm25 || 0);
+                const raw = JSON.parse(message.toString());
+
+                // Enhanced Parser (Handling Soul Brews / Oracle structure)
+                // Reference: https://soul-brews-studio.github.io/two-rivers-oracle/dustboy.html
+                const data = raw.d || raw; // Handle nested 'd' or flat structure
+                const info = raw.info || {};
+
+                const pm25 = parseFloat(data.pm25 || data.db_pm25 || data.pm2_5 || data.value || 0);
                 if (pm25 === 0) return; // Skip zero heartbeats
 
                 packets++;
                 document.getElementById('packet-count').textContent = packets;
 
                 const topicParts = topic.split('/');
-                const name = data.nickname || (topicParts.length >= 4 ? `${topicParts[1]}-${topicParts[3]}` : "Station Node");
+                const name = data.myName || data.nickname || info.id || (topicParts.length >= 4 ? `${topicParts[1]}-${topicParts[3]}` : "Station Node");
 
                 const normalized = {
-                    id: data.id || name,
+                    id: info.id || data.id || name,
                     nickname: name,
                     pm25: pm25,
-                    temp: data.temp || data.db_temp,
-                    hum: data.hum || data.db_hum,
+                    temp: data.temperature_c || data.temp || data.db_temp,
+                    hum: data.humidity_rh || data.hum || data.db_hum,
                     area: topicParts[1] || 'Thailand'
                 };
 
-                updateFocalStation(normalized, 'Community');
+                updateFocalStation(normalized, 'Oracle Node');
                 update3DNode(normalized, 'community');
                 updateTable(normalized, 'DustBoy');
                 logToHUD(`RECV: ${name} [PM2.5: ${pm25}]`);
-            } catch (e) { }
+            } catch (e) {
+                console.error("Parse Error:", e);
+            }
         });
 
         async function fetchOfficial() {
