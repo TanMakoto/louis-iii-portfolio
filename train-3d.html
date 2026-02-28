@@ -208,8 +208,10 @@
 
             rows.forEach(row => {
                 const cols = parseCSVRow(row);
-                if (cols.length < 13) return;
-                const [device, model, battery, charging, lat, lon, accuracy, source, place, place_type, locality, address, updated] = cols;
+                if (cols.length < 5) return;
+
+                // New CSV Structure: lat,lon,accuracy,source,locality,address,updated
+                const [lat, lon, accuracy, source, locality, address, updated] = cols;
 
                 if (lat && lon) {
                     const x = (parseFloat(lon) - originLon) * SCALE * 0.95; // Longitude to X
@@ -217,7 +219,7 @@
 
                     const pos = new THREE.Vector3(x, 0, z);
                     points.push(pos);
-                    waypoints.push({ locality, updated, battery });
+                    waypoints.push({ locality, updated, battery: 100 });
                 }
             });
 

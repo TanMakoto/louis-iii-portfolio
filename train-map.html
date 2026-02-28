@@ -196,9 +196,10 @@
 
                 rows.forEach(row => {
                     const columns = parseCSVRow(row);
-                    if (columns.length < 13) return;
+                    if (columns.length < 5) return; // Basic check
 
-                    const [device, model, battery, charging, lat, lon, accuracy, source, place, place_type, locality, address, updated] = columns;
+                    // New CSV Structure: lat,lon,accuracy,source,locality,address,updated
+                    const [lat, lon, accuracy, source, locality, address, updated] = columns;
 
                     if (lat && lon) {
                         const latLng = [parseFloat(lat), parseFloat(lon)];
@@ -213,14 +214,15 @@
                             fillOpacity: 0.8
                         }).addTo(map);
 
-                        const batteryColor = battery > 50 ? '#22c55e' : (battery > 20 ? '#eab308' : '#ef4444');
+                        // Battery data might be missing in this CSV, use 100 as default
+                        const batteryVal = 100;
+                        const batteryColor = '#22c55e';
 
                         marker.bindPopup(`
                             <div class="popup-info">
                                 <h3>📍 ${locality || 'Way-point'}</h3>
                                 <p><strong>Address:</strong> ${address}</p>
                                 <p><strong>Time:</strong> ${updated}</p>
-                                <p><strong>Battery:</strong> <span class="battery-icon" style="background: ${batteryColor}"></span> ${battery}% (${charging})</p>
                                 <p><strong>Source:</strong> ${source} (±${accuracy}m)</p>
                             </div>
                         `);
