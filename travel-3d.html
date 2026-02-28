@@ -459,25 +459,60 @@
         function createTrain() {
             const group = new THREE.Group();
 
-            // Main Body (Futuristic Bullet)
-            const bodyGeo = new THREE.BoxGeometry(1, 0.8, 3);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+            // 1. Sleek Main Body (Lower part) - Metallic Silver
+            const bodyGeo = new THREE.CapsuleGeometry(0.5, 2.5, 4, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,
+                metalness: 0.9,
+                roughness: 0.1,
+                envMapIntensity: 1
+            });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.rotation.x = Math.PI / 2;
+            body.scale.set(1.2, 1, 0.6); // Flattened car look
             group.add(body);
 
-            // Front Glow
-            const glowGeo = new THREE.BoxGeometry(0.8, 0.4, 0.1);
-            const glowMat = new THREE.MeshBasicMaterial({ color: 0x39c5bb });
-            const glow = new THREE.Mesh(glowGeo, glowMat);
-            glow.position.z = 1.51;
-            group.add(glow);
+            // 2. Upper Cabin (Cockpit) - Dark Glass
+            const cabinGeo = new THREE.SphereGeometry(0.45, 16, 16);
+            const cabinMat = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0a,
+                metalness: 1,
+                roughness: 0,
+                transparent: true,
+                opacity: 0.9
+            });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 0.2, 0.2);
+            cabin.scale.set(1, 0.5, 2.5);
+            group.add(cabin);
 
-            // Stripes
-            const stripeGeo = new THREE.BoxGeometry(1.02, 0.1, 2.5);
-            const stripeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-            stripe.position.y = 0.1;
-            group.add(stripe);
+            // 3. Front LED Strip (Glow)
+            const ledGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16, 1, true, 0, Math.PI);
+            const ledMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const led = new THREE.Mesh(ledGeo, ledMat);
+            led.rotation.z = Math.PI / 2;
+            led.position.set(0, 0, 1.5);
+            group.add(led);
+
+            // 4. Rear Taillight Strip (Cyan)
+            const tailGeo = new THREE.BoxGeometry(1.2, 0.1, 0.1);
+            const tailMat = new THREE.MeshBasicMaterial({ color: 0x39c5bb });
+            const tail = new THREE.Mesh(tailGeo, tailMat);
+            tail.position.set(0, 0, -1.6);
+            group.add(tail);
+
+            // 5. Bottom Hover Glow (Subtle)
+            const bottomGlowGeo = new THREE.PlaneGeometry(1.5, 3);
+            const bottomGlowMat = new THREE.MeshBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide
+            });
+            const bottomGlow = new THREE.Mesh(bottomGlowGeo, bottomGlowMat);
+            bottomGlow.rotation.x = Math.PI / 2;
+            bottomGlow.position.y = -0.4;
+            group.add(bottomGlow);
 
             train = group;
             scene.add(train);
@@ -487,6 +522,11 @@
 
         function animate() {
             requestAnimationFrame(animate);
+
+            // Floating Effect
+            if (train) {
+                train.position.y = Math.sin(Date.now() * 0.003) * 0.1;
+            }
 
             // Handle Real-time Controls (W / S)
             if (keys.w) {
