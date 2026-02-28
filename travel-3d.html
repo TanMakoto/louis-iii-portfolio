@@ -134,8 +134,9 @@
         let waypoints = [];
         let currentIndex = 0;
         let speed = 0;
-        let maxSpeed = 0.2; // Up to 200 km/h
+        let maxSpeed = 0.25; // Balanced high speed
         let isRunning = false;
+        let keys = { w: false, s: false }; // Track key states
         let viewMode = 'follow'; // 'follow' or 'cockpit'
 
         // UI elements
@@ -238,15 +239,15 @@
 
                 window.addEventListener('keydown', (e) => {
                     const key = e.key.toLowerCase();
-                    if (key === 'w') {
-                        speed = Math.min(speed + 0.02, maxSpeed);
-                        if (!isRunning) {
-                            isRunning = true;
-                            updateStartButtonUI();
-                        }
-                    }
-                    if (key === 's') speed = Math.max(speed - 0.02, 0);
+                    if (key === 'w') keys.w = true;
+                    if (key === 's') keys.s = true;
                     if (key === 'c') viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    const key = e.key.toLowerCase();
+                    if (key === 'w') keys.w = false;
+                    if (key === 's') keys.s = false;
                 });
             } catch (err) {
                 console.error("Initialization Error:", err);
@@ -495,6 +496,18 @@
 
         function animate() {
             requestAnimationFrame(animate);
+
+            // Handle Real-time Controls (W / S)
+            if (keys.w) {
+                speed = Math.min(speed + 0.001, maxSpeed); // Smooth acceleration
+                if (!isRunning && speed > 0) {
+                    isRunning = true;
+                    updateStartButtonUI();
+                }
+            }
+            if (keys.s) {
+                speed = Math.max(speed - 0.002, 0); // Smooth braking
+            }
 
             if (isRunning && currentIndex < points.length - 1) {
                 const target = points[currentIndex + 1];
