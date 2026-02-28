@@ -9,6 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -326,7 +327,7 @@
         <div id="canvas-container"></div>
         <div
             style="position: absolute; top: 20px; left: 20px; z-index: 20; color: var(--accent); font-size: 0.6rem; font-family: 'Orbitron';">
-            DATA NEXUS RELAY v3.0 // DUAL SOURCE PROTOCOL
+            DATA NEXUS RELAY v3.2 // DUAL SOURCE PROTOCOL (Orbit Locked)
         </div>
     </div>
 
@@ -416,6 +417,13 @@
         container.appendChild(renderer.domElement);
 
         camera.position.z = 18;
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enablePan = true;
+        controls.minDistance = 5;
+        controls.maxDistance = 60;
 
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
@@ -619,6 +627,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            controls.update(); // Update controls
             nexus.rotation.y += 0.005;
             stars.rotation.y += 0.0002;
             nodeGroup.rotation.y += 0.001;
