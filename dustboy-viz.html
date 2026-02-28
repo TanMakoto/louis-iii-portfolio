@@ -4,27 +4,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DustBoy 3D Vision 🌌 PM2.5 Live</title>
+    <title>Elite DustBoy Dashboard v3.0 🛰️ Live PM2.5</title>
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
-            --bg: #05080a;
+            --bg: #030708;
+            --panel: rgba(13, 22, 28, 0.7);
             --accent: #39c5bb;
+            --accent-glow: rgba(57, 197, 187, 0.3);
             --danger: #ef4444;
             --safe: #22c55e;
             --warning: #f59e0b;
+            --border: rgba(57, 197, 187, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             margin: 0;
-            overflow: hidden;
             background: var(--bg);
             font-family: 'Inter', sans-serif;
             color: white;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            grid-template-rows: 60px 1fr 250px;
+            grid-template-areas:
+                "header header"
+                "visual focal"
+                "footer footer";
+        }
+
+        /* --- UI COMPONENTS --- */
+        header {
+            grid-area: header;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .logo {
+            font-family: 'Orbitron';
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 2px;
+            font-size: 1.1rem;
+        }
+
+        .system-status {
+            display: flex;
+            gap: 20px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            background: var(--safe);
+            box-shadow: 0 0 10px var(--safe);
+        }
+
+        #visual-area {
+            grid-area: visual;
+            position: relative;
+            overflow: hidden;
         }
 
         #canvas-container {
@@ -32,372 +91,535 @@
             inset: 0;
         }
 
-        .overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            pointer-events: none;
+        #focal-area {
+            grid-area: focal;
+            background: var(--panel);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid var(--border);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 50;
+            overflow-y: auto;
         }
 
-        .hud-panel {
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(57, 197, 187, 0.3);
-            border-radius: 12px;
+        footer {
+            grid-area: footer;
+            background: rgba(5, 10, 12, 0.9);
+            border-top: 1px solid var(--border);
+            padding: 15px 25px;
+            z-index: 100;
+            overflow-y: hidden;
+        }
+
+        /* --- FOCAL CARD --- */
+        .focal-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(57, 197, 187, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        h1 {
-            margin: 0;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            color: var(--accent);
-            letter-spacing: 2px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            margin-top: 5px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--accent);
-        }
-
-        #data-stream {
+        .focal-card::before {
+            content: "";
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            height: 100px;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+        }
+
+        .station-meta {
+            font-size: 0.7rem;
+            color: var(--accent);
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .station-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 5px 0 15px 0;
+        }
+
+        .aqi-main {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .aqi-value {
+            font-family: 'Orbitron';
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .aqi-unit {
+            font-size: 1rem;
+            opacity: 0.5;
+            font-weight: 400;
+        }
+
+        .aqi-status-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .aqi-fill {
+            height: 100%;
+            transition: width 1s, background 1s;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .weather-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
             border-radius: 8px;
             display: flex;
-            gap: 10px;
-            padding: 10px;
-            overflow-x: auto;
-            pointer-events: all;
-            z-index: 20;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .data-card {
-            min-width: 150px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 0.75rem;
-            border-left: 3px solid var(--accent);
-            animation: slideIn 0.3s ease-out;
+        .weather-label {
+            font-size: 0.6rem;
+            opacity: 0.5;
+            text-transform: uppercase;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(-20px);
-                opacity: 0;
-            }
+        .weather-val {
+            font-family: 'Orbitron';
+            font-size: 1.1rem;
+            margin-top: 4px;
+        }
 
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        /* --- DATA TABLE --- */
+        .table-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--accent);
+            font-family: 'Orbitron';
+            font-size: 0.7rem;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        tr:hover {
+            background: rgba(57, 197, 187, 0.05);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        .badge-safe {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--safe);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        /* --- RESPONSIVE SCROLLBAR --- */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 10px;
+        }
+
+        #mini-chart {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            margin-top: 15px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: var(--accent);
+            opacity: 0.3;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.5s;
+        }
+
+        .chart-bar:hover {
+            opacity: 1;
         }
 
         .back-link {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-            color: var(--accent);
+            color: white;
             text-decoration: none;
-            font-size: 0.8rem;
-            border: 1px solid var(--accent);
-            padding: 5px 15px;
-            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 4px;
             transition: all 0.3s;
-            pointer-events: all;
         }
 
         .back-link:hover {
-            background: var(--accent);
-            color: var(--bg);
-        }
-
-        #active-node {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            width: 250px;
-            pointer-events: none;
-        }
-
-        .value-display {
-            font-size: 2.5rem;
-            font-weight: bold;
-            font-family: 'Orbitron';
-            margin: 10px 0;
-        }
-
-        .unit {
-            font-size: 0.8rem;
-            opacity: 0.6;
+            border-color: var(--accent);
+            color: var(--accent);
         }
     </style>
 </head>
 
 <body>
 
-    <a href="index.html" class="back-link">← Return to Nexus</a>
+    <header>
+        <div class="logo">ELITE DUSTBOY VISION</div>
+        <div class="system-status">
+            <div><span class="status-dot"></span>MQTT NODE-RED: ONLINE</div>
+            <div>AIR4THAI API: SYNCED</div>
+            <a href="index.html" class="back-link">EXIT NEXUS</a>
+        </div>
+    </header>
 
-    <div id="canvas-container"></div>
-
-    <div class="overlay">
-        <div class="hud-panel">
-            <h1>DUSTBOY VISION v2.0</h1>
-            <div id="mqtt-status" class="status-badge">CONNECTING TO PROTOCOL...</div>
-            <p style="font-size: 0.7rem; opacity: 0.7; margin-top: 15px;">REAL-TIME PM2.5 SENSOR NETWORK</p>
+    <div id="visual-area">
+        <div id="canvas-container"></div>
+        <div
+            style="position: absolute; top: 20px; left: 20px; z-index: 20; color: var(--accent); font-size: 0.6rem; font-family: 'Orbitron';">
+            DATA NEXUS RELAY v3.0 // DUAL SOURCE PROTOCOL
         </div>
     </div>
 
-    <div id="active-node">
-        <div class="hud-panel" id="detail-panel" style="opacity: 0; transition: opacity 0.5s;">
-            <p id="station-name" style="margin: 0; font-size: 0.8rem; color: var(--accent);"></p>
-            <div class="value-display"><span id="pm-value">--</span> <span class="unit">µg/m³</span></div>
-            <p id="station-status" style="margin: 0; font-size: 0.7rem;"></p>
+    <div id="focal-area">
+        <div class="station-meta">Focal Station Insights</div>
+        <div class="focal-card" id="focal-card">
+            <div id="focal-source" style="font-size: 0.6rem; position: absolute; top: 10px; right: 10px; opacity: 0.5;">
+                COMMUNITY</div>
+            <div class="station-name" id="focal-name">Awaiting Data...</div>
+            <div class="aqi-main">
+                <div class="aqi-value" id="focal-pm25">--</div>
+                <div class="aqi-unit">µg/m³ PM<sub>2.5</sub></div>
+            </div>
+            <div id="focal-advice" style="font-size: 0.75rem; margin-bottom: 5px;">Awaiting connection to MQTT pulse...
+            </div>
+            <div class="aqi-status-bar">
+                <div class="aqi-fill" id="focal-bar" style="width: 0%;"></div>
+            </div>
+
+            <div class="weather-grid">
+                <div class="weather-item">
+                    <span class="weather-label">Temperature</span>
+                    <span class="weather-val" id="focal-temp">28.5°C</span>
+                </div>
+                <div class="weather-item">
+                    <span class="weather-label">Humidity</span>
+                    <span class="weather-val" id="focal-hum">62%</span>
+                </div>
+                <div class="weather-item">
+                    <span class="weather-label">Wind Node</span>
+                    <span class="weather-val">4.2 km/h</span>
+                </div>
+                <div class="weather-item">
+                    <span class="weather-label">AQI Index</span>
+                    <span class="weather-val" id="focal-aqi">--</span>
+                </div>
+            </div>
+
+            <div id="mini-chart">
+                <!-- Bars generated by JS -->
+            </div>
+        </div>
+
+        <div class="hud-panel" style="padding: 15px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border);">
+            <div
+                style="font-size: 0.65rem; color: var(--accent); margin-bottom: 10px; display: flex; justify-content: space-between;">
+                <span>LIVE PACKET STREAM</span>
+                <span id="packet-count">0</span>
+            </div>
+            <div id="mini-log"
+                style="font-size: 0.6rem; font-family: monospace; height: 100px; overflow-y: hidden; opacity: 0.7;">
+                > INITIALIZING GLOBAL SYNC...<br>
+                > CONNECTING TO DUSTBOY WSS BRIDGE...
+            </div>
         </div>
     </div>
 
-    <div id="data-stream"></div>
+    <footer>
+        <div class="table-container">
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">#</th>
+                        <th>STATION NAME / PROVINCE</th>
+                        <th>AREA</th>
+                        <th style="width: 100px;">PM2.5 (µg/m³)</th>
+                        <th style="width: 120px;">AQI STATUS</th>
+                        <th style="width: 150px;">LAST UPDATE</th>
+                        <th style="width: 80px;">SOURCE</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Rows injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </footer>
 
     <script>
-        // --- 3D SCENE SETUP ---
+        // --- 3D SCENE SETUP (Mini Nexus) ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
 
-        camera.position.z = 15;
+        camera.position.z = 18;
 
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0x404040);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x39c5bb, 1, 100);
-        pointLight.position.set(10, 10, 10);
-        scene.add(pointLight);
-
-        // Starfield
         const starGeo = new THREE.BufferGeometry();
         const starCoords = [];
-        for (let i = 0; i < 3000; i++) {
-            starCoords.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
+        for (let i = 0; i < 4000; i++) {
+            starCoords.push((Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300);
         }
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
-        const stars = new THREE.Points(starGeo, starMat);
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x39c5bb, size: 0.1, transparent: true, opacity: 0.5 }));
         scene.add(stars);
 
-        // Central Nexus Sprite (Glow)
-        const nexusGeo = new THREE.SphereGeometry(1, 32, 32);
-        const nexusMat = new THREE.MeshStandardMaterial({
-            color: 0x39c5bb,
-            emissive: 0x39c5bb,
-            emissiveIntensity: 2,
-            wireframe: true
-        });
-        const nexus = new THREE.Mesh(nexusGeo, nexusMat);
+        const nexus = new THREE.Mesh(
+            new THREE.SphereGeometry(2, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0x39c5bb, emissive: 0x39c5bb, emissiveIntensity: 1, wireframe: true })
+        );
         scene.add(nexus);
 
-        const nodes = new Map();
         const nodeGroup = new THREE.Group();
         scene.add(nodeGroup);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        // --- MQTT INTEGRATION ---
-        const MQTT_URL = 'wss://dustboy-wss-bridge.laris.workers.dev/mqtt';
-        const client = mqtt.connect(MQTT_URL);
-        const statusEl = document.getElementById('mqtt-status');
-        const streamEl = document.getElementById('data-stream');
+        const nodes = new Map();
+        const stationHistory = new Map(); // For charts
+
+        // --- DATA LOGIC ---
+        function getColor(pm25) {
+            if (pm25 <= 25) return { hex: 0x22c55e, css: '#22c55e', label: 'EXCELLENT', advice: 'สภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้ง' };
+            if (pm25 <= 50) return { hex: 0xf59e0b, css: '#f59e0b', label: 'MODERATE', advice: 'คุณภาพอากาศปานกลาง ทำกิจกรรมกลางแจ้งได้ตามปกติ' };
+            return { hex: 0xef4444, css: '#ef4444', label: 'UNHEALTHY', advice: 'ควรลดระยะเวลาการทำกิจกรรมกลางแจ้ง หรือใช้อุปกรณ์ป้องกัน' };
+        }
+
+        function updateFocalStation(data, source) {
+            const color = getColor(data.pm25);
+            document.getElementById('focal-name').textContent = data.nickname;
+            document.getElementById('focal-pm25').textContent = data.pm25;
+            document.getElementById('focal-pm25').style.color = color.css;
+            document.getElementById('focal-source').textContent = source.toUpperCase();
+            document.getElementById('focal-advice').textContent = color.advice;
+            document.getElementById('focal-aqi').textContent = Math.round(data.pm25 * 1.5); // Simplified conversion
+
+            const fill = document.getElementById('focal-bar');
+            fill.style.width = Math.min(100, (data.pm25 / 100) * 100) + '%';
+            fill.style.background = color.css;
+
+            if (data.temp) document.getElementById('focal-temp').textContent = data.temp + '°C';
+            if (data.hum) document.getElementById('focal-hum').textContent = data.hum + '%';
+
+            // Pulse Chart
+            updateMiniChart(data.id, data.pm25);
+        }
+
+        function updateMiniChart(id, val) {
+            const chart = document.getElementById('mini-chart');
+            if (!stationHistory.has(id)) stationHistory.set(id, []);
+            const history = stationHistory.get(id);
+            history.push(val);
+            if (history.length > 20) history.shift();
+
+            chart.innerHTML = '';
+            history.forEach(h => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = Math.min(100, (h / 100) * 100) + '%';
+                bar.style.background = getColor(h).css;
+                chart.appendChild(bar);
+            });
+        }
+
+        function updateTable(data, source) {
+            const tbody = document.getElementById('table-body');
+            const color = getColor(data.pm25);
+            const id = `row-${data.id || data.nickname.replace(/\s/g, '-')}`;
+
+            let row = document.getElementById(id);
+            const rowContent = `
+                <td><div style="width:8px; height:8px; border-radius:50%; background:${color.css};"></div></td>
+                <td style="font-weight:600;">${data.nickname}</td>
+                <td style="opacity:0.6;">${data.area || 'N/A'}</td>
+                <td style="font-family:'Orbitron'; font-weight:700; color:${color.css}">${data.pm25}</td>
+                <td><span class="badge" style="background:${color.css}33; color:${color.css}; border:1px solid ${color.css}66;">${color.label}</span></td>
+                <td style="opacity:0.5;">${new Date().toLocaleTimeString()}</td>
+                <td><span style="font-size:0.6rem; opacity:0.6; border:1px solid rgba(255,255,255,0.1); padding:2px 5px; border-radius:3px;">${source}</span></td>
+            `;
+
+            if (!row) {
+                row = document.createElement('tr');
+                row.id = id;
+                row.innerHTML = rowContent;
+                tbody.prepend(row);
+                if (tbody.children.length > 100) tbody.lastChild.remove();
+            } else {
+                row.innerHTML = rowContent;
+            }
+        }
+
+        // --- MQTT & API ---
+        const client = mqtt.connect('wss://dustboy-wss-bridge.laris.workers.dev/mqtt');
+        let packets = 0;
 
         client.on('connect', () => {
-            statusEl.textContent = 'PROTOCOL CONNECTED: SYSTEM LIVE';
-            statusEl.style.borderColor = '#22c55e';
-            statusEl.style.color = '#22c55e';
             client.subscribe('DUSTBOY/+/+/+/status');
+            logToHUD("SUCCESS: MQTT CONNECTION ESTABLISHED");
         });
 
         client.on('message', (topic, message) => {
             try {
                 const data = JSON.parse(message.toString());
-                console.log("MQTT Received:", data); // For user F12 debugging
+                const pm25 = parseFloat(data.pm25 || data.db_pm25 || 0);
+                if (pm25 === 0) return; // Skip zero heartbeats
 
-                // Robust key detection
-                const pm25 = data.pm25 || data.db_pm25 || data.pm2_5 || data.value || 0;
-                const nickname = data.nickname || data.db_nickname || data.db_name || data.id || "Unknown Station";
+                packets++;
+                document.getElementById('packet-count').textContent = packets;
 
-                const normalizedData = {
-                    ...data,
-                    pm25: parseFloat(pm25),
-                    nickname: nickname
+                const topicParts = topic.split('/');
+                const name = data.nickname || (topicParts.length >= 4 ? `${topicParts[1]}-${topicParts[3]}` : "Station Node");
+
+                const normalized = {
+                    id: data.id || name,
+                    nickname: name,
+                    pm25: pm25,
+                    temp: data.temp || data.db_temp,
+                    hum: data.hum || data.db_hum,
+                    area: topicParts[1] || 'Thailand'
                 };
 
-                updateNode(normalizedData, 'community');
-                addStreamEvent(normalizedData, 'community');
-            } catch (e) {
-                console.error("Payload error", e);
-            }
+                updateFocalStation(normalized, 'Community');
+                update3DNode(normalized, 'community');
+                updateTable(normalized, 'DustBoy');
+                logToHUD(`RECV: ${name} [PM2.5: ${pm25}]`);
+            } catch (e) { }
         });
 
-        // --- AIR4THAI INTEGRATION ---
-        // Using GISTDA HTTPS mirror for Air4Thai to avoid CORS/Mixed Content issues
-        const AIR4THAI_URL = 'https://pm25.gistda.or.th/rest/getPollution';
-
-        async function fetchOfficialData() {
+        async function fetchOfficial() {
             try {
-                // For the purpose of this demo, we'll simulate the fetch if the actual PCD endpoint blocks us
-                // but usually GISTDA's rest API is open and HTTPS
-                const response = await fetch('https://pm25.gistda.or.th/rest/getPollution');
-                const result = await response.json();
-
-                if (result && result.stations) {
-                    result.stations.forEach(station => {
-                        const normalizedData = {
-                            nickname: station.nameTH || station.nameEN,
-                            pm25: parseFloat(station.AQILast?.PM25?.value || 0),
-                            id: station.stationID,
-                            area: station.areaTH
+                const res = await fetch('https://pm25.gistda.or.th/rest/getPollution');
+                const json = await res.json();
+                if (json && json.stations) {
+                    json.stations.forEach(s => {
+                        const pm25 = parseFloat(s.AQILast?.PM25?.value || 0);
+                        const normalized = {
+                            id: s.stationID,
+                            nickname: s.nameTH || s.nameEN,
+                            pm25: pm25,
+                            area: s.areaTH
                         };
-                        updateNode(normalizedData, 'official');
+                        update3DNode(normalized, 'official');
+                        updateTable(normalized, 'Air4Thai');
                     });
                 }
-            } catch (err) {
-                console.warn("Official Data Fetch Error (CORS):", err);
-                // Fallback to internal sample for demo if blocked
-                simulateOfficialNodes();
-            }
+            } catch (e) { logToHUD("WARN: GISTDA API SYNC FAILED (CORS)"); simulateOfficial(); }
         }
 
-        function simulateOfficialNodes() {
+        function simulateOfficial() {
             const samples = [
-                { nickname: "กรมอุตุนิยมวิทยาบางนา", pm25: 15, area: "บางนา, กรุงเทพฯ" },
-                { nickname: "โรงพยาบาลจุฬาลงกรณ์", pm25: 18, area: "ปทุมวัน, กรุงเทพฯ" },
-                { nickname: "สวนสาธารณะธารา", pm25: 8, area: "เมือง, กระบี่" }
+                { nickname: "กรมอุตุฯบางนา", pm25: 18, area: "บางนา, กรุงเทพฯ" },
+                { nickname: "รพ.จุฬาฯ", pm25: 22, area: "ปทุมวัน, กรุงเทพฯ" },
+                { nickname: "สถานีเชียงใหม่", pm25: 45, area: "อ.เมือง, เชียงใหม่" }
             ];
             samples.forEach((s, i) => {
-                const data = { ...s, id: 'official_' + i };
-                updateNode(data, 'official');
+                const data = { ...s, id: 'sim-' + i };
+                update3DNode(data, 'official');
+                updateTable(data, 'GISTDA');
             });
         }
 
-        fetchOfficialData();
-        setInterval(fetchOfficialData, 300000); // Update every 5 mins
-
-        function getColorFromAQI(pm25) {
-            if (pm25 <= 25) return 0x22c55e; // Safe
-            if (pm25 <= 50) return 0xf59e0b; // Warning
-            return 0xef4444; // Danger
+        function logToHUD(msg) {
+            const log = document.getElementById('mini-log');
+            log.innerHTML = `> ${msg}<br>${log.innerHTML}`;
+            if (log.innerHTML.length > 500) log.innerHTML = log.innerHTML.slice(0, 500);
         }
 
-        function updateNode(data) {
-            const id = data.nickname || data.id;
-            const pm25 = parseFloat(data.pm25);
-
-            if (!nodes.has(id)) {
-                // Create new 3D Node
-                const geo = new THREE.IcosahedronGeometry(0.5, 1);
-                const mat = new THREE.MeshStandardMaterial({
-                    color: getColorFromAQI(pm25),
-                    emissive: getColorFromAQI(pm25),
-                    emissiveIntensity: 1,
-                    wireframe: true
-                });
-                const node = new THREE.Mesh(geo, mat);
-
-                // Random position in sphere around nexus
-                const angle = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                const r = 5 + Math.random() * 8;
-                node.position.set(
-                    r * Math.sin(phi) * Math.cos(angle),
-                    r * Math.sin(phi) * Math.sin(angle),
-                    r * Math.cos(phi)
-                );
-
-                nodeGroup.add(node);
-                nodes.set(id, { mesh: node, data: data });
-
-                // Line to Nexus
-                const lineMat = new THREE.LineBasicMaterial({ color: 0x39c5bb, transparent: true, opacity: 0.2 });
-                const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), node.position]);
-                const line = new THREE.Line(lineGeo, lineMat);
-                scene.add(line);
+        function update3DNode(data, type) {
+            if (!nodes.has(data.id)) {
+                const geo = type === 'official' ? new THREE.OctahedronGeometry(0.8, 0) : new THREE.IcosahedronGeometry(0.5, 1);
+                const mat = new THREE.MeshStandardMaterial({ color: getColor(data.pm25).hex, wireframe: true });
+                const mesh = new THREE.Mesh(geo, mat);
+                const r = type === 'official' ? 6 + Math.random() * 2 : 10 + Math.random() * 5;
+                const phi = Math.random() * Math.PI * 2;
+                const theta = Math.random() * Math.PI;
+                mesh.position.set(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(theta) * Math.sin(phi), r * Math.cos(theta));
+                nodeGroup.add(mesh);
+                nodes.set(data.id, mesh);
             } else {
-                const nodeObj = nodes.get(id);
-                nodeObj.mesh.material.color.setHex(getColorFromAQI(pm25));
-                nodeObj.mesh.material.emissive.setHex(getColorFromAQI(pm25));
-                nodeObj.data = data;
+                nodes.get(data.id).material.color.setHex(getColor(data.pm25).hex);
             }
-
-            // Show details of last received node
-            showNodeDetails(data);
         }
 
-        function showNodeDetails(data) {
-            const panel = document.getElementById('detail-panel');
-            const name = document.getElementById('station-name');
-            const val = document.getElementById('pm-value');
-            const status = document.getElementById('station-status');
-
-            panel.style.opacity = '1';
-            name.textContent = data.nickname || "DustBoy Node";
-            val.textContent = data.pm25;
-            val.style.color = '#' + getColorFromAQI(data.pm25).toString(16).padStart(6, '0');
-            status.textContent = `LAST UPDATED: ${new Date().toLocaleTimeString()}`;
-        }
-
-        function addStreamEvent(data) {
-            const card = document.createElement('div');
-            card.className = 'data-card';
-            card.style.borderLeftColor = '#' + getColorFromAQI(data.pm25).toString(16).padStart(6, '0');
-            card.innerHTML = `
-                <div><strong>${data.nickname || 'Unknown'}</strong></div>
-                <div>PM2.5: ${data.pm25} µg/m³</div>
-            `;
-            streamEl.prepend(card);
-            if (streamEl.children.length > 20) streamEl.lastChild.remove();
-        }
-
-        // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
-
-            nexus.rotation.y += 0.01;
-            stars.rotation.y += 0.0005;
-            nodeGroup.rotation.y += 0.002;
-
-            nodes.forEach(node => {
-                node.mesh.rotation.x += 0.02;
-                node.mesh.rotation.y += 0.02;
-                // Subtle pulse
-                const s = 1 + Math.sin(Date.now() * 0.005) * 0.1;
-                node.mesh.scale.set(s, s, s);
-            });
-
+            nexus.rotation.y += 0.005;
+            stars.rotation.y += 0.0002;
+            nodeGroup.rotation.y += 0.001;
             renderer.render(scene, camera);
         }
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(w, h);
         });
 
+        fetchOfficial();
+        setInterval(fetchOfficial, 600000);
         animate();
     </script>
 </body>
