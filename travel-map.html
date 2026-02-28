@@ -55,6 +55,7 @@
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(90deg, var(--miku-cyan), var(--accent-color));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -161,7 +162,7 @@
     <div class="header">
         <h1>Miku's Travel Map 🎵</h1>
         <p>Chiang Mai → Phitsanulok GPS Stream</p>
-        <a href="train-3d.html"
+        <a href="travel-3d.html"
             style="color:#39c5bb; text-decoration:none; font-size:0.8rem; border:1px solid #39c5bb; padding:5px 10px; border-radius:15px; display:inline-block; margin-top:10px;">Switch
             to 3D Simulator 🎮</a>
     </div>
@@ -175,7 +176,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        const CSV_URL = 'travel-data.csv?v=1.0.3';
+        const CSV_URL = 'travel-phitsanulok.csv?v=1.0.4';
 
         const map = L.map('map').setView([18.7883, 98.9853], 8);
 
