@@ -96,6 +96,7 @@
         <div id="speedometer">Speed: <span class="stat" id="speed-text">0</span> <small>km/h</small></div>
         <div style="margin-top:10px; font-size:0.8rem; color:#94a3b8;">
             [W] Accelerate | [S] Brake | [C] Camera
+            <br><span style="font-size: 0.6rem; opacity: 0.5;">v1.0.3 - Cache Buster Active</span>
         </div>
     </div>
 
@@ -118,7 +119,7 @@
         import * as THREE from 'three';
 
         // --- Configuration ---
-        const CSV_URL = 'travel-data.csv';
+        const CSV_URL = 'travel-data.csv?v=1.0.3';
         const SCALE = 100000; // Earth scale to scene units
 
         let scene, camera, renderer, train, track;
