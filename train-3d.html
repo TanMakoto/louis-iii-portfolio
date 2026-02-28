@@ -103,6 +103,8 @@
     <div class="controls">
         <button class="btn" id="start-btn">ENGAGE ENGINE</button>
         <button class="btn" id="cam-btn">SWITCH VIEW</button>
+        <button class="btn" id="upload-btn" style="border-color: #39c5bb; color: #39c5bb;">UPLOAD KML 🛰️</button>
+        <input type="file" id="kml-input" accept=".kml" style="display: none;">
     </div>
 
     <!-- Three.js from CDN -->
@@ -136,6 +138,8 @@
         const speedId = document.getElementById('speed-text');
         const startBtn = document.getElementById('start-btn');
         const camBtn = document.getElementById('cam-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        const kmlInput = document.getElementById('kml-input');
 
         async function init() {
             try {
@@ -183,6 +187,7 @@
 
                 // Event Listeners
                 startBtn.addEventListener('click', () => {
+                    if (points.length < 2) return;
                     isRunning = !isRunning;
                     startBtn.textContent = isRunning ? "STOP ENGINE" : "ENGAGE ENGINE";
                     startBtn.style.background = isRunning ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.2)";
@@ -193,6 +198,9 @@
                     viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
                 });
 
+                uploadBtn.addEventListener('click', () => kmlInput.click());
+                kmlInput.addEventListener('change', handleKMLUpload);
+
                 window.addEventListener('keydown', (e) => {
                     if (e.key.toLowerCase() === 'w') speed = Math.min(speed + 0.005, maxSpeed);
                     if (e.key.toLowerCase() === 's') speed = Math.max(speed - 0.005, 0);
@@ -202,6 +210,78 @@
                 console.error("Initialization Error:", err);
                 document.getElementById('ui').innerHTML = `<h1 style="color:#ef4444">3D Error</h1><p>${err.message}</p>`;
             }
+        }
+
+        async function handleKMLUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            locId.textContent = "Parsing KML...";
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+                    const coordString = xmlDoc.getElementsByTagName("coordinates")[0]?.textContent;
+
+                    if (!coordString) throw new Error("No <coordinates> tag found in KML");
+
+                    const newPoints = [];
+                    const pairs = coordString.trim().split(/\s+/);
+
+                    const firstPair = pairs[0].split(',');
+                    const originLon = parseFloat(firstPair[0]);
+                    const originLat = parseFloat(firstPair[1]);
+
+                    pairs.forEach(pair => {
+                        const [lon, lat] = pair.split(',').map(parseFloat);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const x = (lon - originLon) * SCALE * 0.95;
+                            const z = -(lat - originLat) * SCALE;
+                            newPoints.push(new THREE.Vector3(x, 0, z));
+                        }
+                    });
+
+                    if (newPoints.length < 2) throw new Error("Not enough points in KML");
+
+                    rebuildRoute(newPoints);
+                    locId.textContent = "Custom Route Loaded";
+                } catch (err) {
+                    alert("Error loading KML: " + err.message);
+                    locId.textContent = "KML Error";
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function rebuildRoute(newPoints) {
+            // Stop engine
+            isRunning = false;
+            startBtn.textContent = "ENGAGE ENGINE";
+            startBtn.style.background = "rgba(56, 189, 248, 0.2)";
+            startBtn.style.borderColor = "#38bdf8";
+
+            // Remove old track
+            if (track) scene.remove(track);
+
+            points = newPoints;
+            waypoints = points.map(() => ({ locality: "Uploaded Route", updated: "Custom", battery: 100 }));
+            currentIndex = 0;
+
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geometry = new THREE.TubeGeometry(curve, Math.min(400, points.length * 3), 0.2, 8, false);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x39c5bb, // Miku Cyan for custom routes
+                emissive: 0x39c5bb,
+                emissiveIntensity: 0.5,
+                wireframe: true
+            });
+            track = new THREE.Mesh(geometry, material);
+            scene.add(track);
+
+            // Reset train
+            train.position.copy(points[0]);
+            train.lookAt(points[1]);
         }
 
         async function loadGPSData() {
