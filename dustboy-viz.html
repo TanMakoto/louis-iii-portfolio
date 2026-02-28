@@ -235,8 +235,20 @@
         client.on('message', (topic, message) => {
             try {
                 const data = JSON.parse(message.toString());
-                updateNode(data);
-                addStreamEvent(data);
+                console.log("MQTT Received:", data); // For user F12 debugging
+
+                // Robust key detection
+                const pm25 = data.pm25 || data.db_pm25 || data.pm2_5 || data.value || 0;
+                const nickname = data.nickname || data.db_nickname || data.db_name || data.id || "Unknown Station";
+
+                const normalizedData = {
+                    ...data,
+                    pm25: parseFloat(pm25),
+                    nickname: nickname
+                };
+
+                updateNode(normalizedData);
+                addStreamEvent(normalizedData);
             } catch (e) {
                 console.error("Payload error", e);
             }
