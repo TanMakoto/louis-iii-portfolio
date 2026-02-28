@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miku Train Sim 3D 🚂✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050608;
+            font-family: 'Inter', sans-serif;
+            color: white;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            pointer-events: none;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px 30px;
+            border-radius: 40px;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn {
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid #38bdf8;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+
+        .btn:hover {
+            background: #38bdf8;
+            color: #000;
+        }
+
+        .stat {
+            color: #39c5bb;
+            font-weight: 700;
+        }
+
+        #speedometer {
+            font-size: 2rem;
+            margin-top: 10px;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="index.html" class="back-btn">← Back to Portfolio</a>
+
+    <div id="ui">
+        <h1 style="margin:0; font-family:'Outfit'; font-size:1.5rem; color:#39c5bb;">Miku Simulator 3D</h1>
+        <p style="margin:5px 0 15px; color:#94a3b8;">GPS: Northern Thailand Route</p>
+        <div id="location">Location: <span class="stat" id="loc-text">Loading...</span></div>
+        <div id="speedometer">Speed: <span class="stat" id="speed-text">0</span> <small>km/h</small></div>
+        <div style="margin-top:10px; font-size:0.8rem; color:#94a3b8;">
+            [W] Accelerate | [S] Brake | [C] Camera
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="start-btn">ENGAGE ENGINE</button>
+        <button class="btn" id="cam-btn">SWITCH VIEW</button>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- Configuration ---
+        const CSV_URL = 'https://raw.githubusercontent.com/Soul-Brews-Studio/two-rivers-oracle/main/%CF%88/lab/github-pages-workshop/travel-phitsanulok.csv';
+        const SCALE = 100000; // Earth scale to scene units
+
+        let scene, camera, renderer, train, track;
+        let points = [];
+        let waypoints = [];
+        let currentIndex = 0;
+        let speed = 0;
+        let maxSpeed = 0.05; // per frame segment
+        let isRunning = false;
+        let viewMode = 'follow'; // 'follow' or 'cockpit'
+
+        // UI elements
+        const locId = document.getElementById('loc-text');
+        const speedId = document.getElementById('speed-text');
+        const startBtn = document.getElementById('start-btn');
+        const camBtn = document.getElementById('cam-btn');
+
+        async function init() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050610);
+            scene.fog = new THREE.FogExp2(0x050610, 0.002);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+
+            const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x050610, 2);
+            scene.add(hemiLight);
+
+            // Grid Floor
+            const grid = new THREE.GridHelper(2000, 100, 0x38bdf8, 0x1e293b);
+            grid.position.y = -0.05;
+            scene.add(grid);
+
+            // Load Data
+            await loadGPSData();
+
+            // Create Train
+            createTrain();
+
+            // Event Listeners
+            startBtn.addEventListener('click', () => {
+                isRunning = !isRunning;
+                startBtn.textContent = isRunning ? "STOP ENGINE" : "ENGAGE ENGINE";
+                startBtn.style.background = isRunning ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.2)";
+                startBtn.style.borderColor = isRunning ? "#ef4444" : "#38bdf8";
+            });
+
+            camBtn.addEventListener('click', () => {
+                viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'w') speed = Math.min(speed + 0.005, maxSpeed);
+                if (e.key.toLowerCase() === 's') speed = Math.max(speed - 0.005, 0);
+                if (e.key.toLowerCase() === 'c') viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
+            });
+
+            animate();
+        }
+
+        async function loadGPSData() {
+            const resp = await fetch(CSV_URL);
+            const text = await resp.text();
+            const rows = text.split('\n').slice(1);
+
+            const originLat = 18.464717; // First point lat
+            const originLon = 99.05675;  // First point lon
+
+            rows.forEach(row => {
+                const cols = parseCSVRow(row);
+                if (cols.length < 13) return;
+                const [device, model, battery, charging, lat, lon, accuracy, source, place, place_type, locality, address, updated] = cols;
+
+                if (lat && lon) {
+                    const x = (parseFloat(lon) - originLon) * SCALE * 0.95; // Longitude to X
+                    const z = -(parseFloat(lat) - originLat) * SCALE;      // Latitude to Z (negative for orientation)
+
+                    const pos = new THREE.Vector3(x, 0, z);
+                    points.push(pos);
+                    waypoints.push({ locality, updated, battery });
+                }
+            });
+
+            // Create Visual Track
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geometry = new THREE.TubeGeometry(curve, 200, 0.2, 8, false);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                emissive: 0x38bdf8,
+                emissiveIntensity: 0.5,
+                wireframe: true
+            });
+            track = new THREE.Mesh(geometry, material);
+            scene.add(track);
+        }
+
+        function createTrain() {
+            const group = new THREE.Group();
+
+            // Main Body (Futuristic Bullet)
+            const bodyGeo = new THREE.BoxGeometry(1, 0.8, 3);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            group.add(body);
+
+            // Front Glow
+            const glowGeo = new THREE.BoxGeometry(0.8, 0.4, 0.1);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0x39c5bb });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            glow.position.z = 1.51;
+            group.add(glow);
+
+            // Stripes
+            const stripeGeo = new THREE.BoxGeometry(1.02, 0.1, 2.5);
+            const stripeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+            stripe.position.y = 0.1;
+            group.add(stripe);
+
+            train = group;
+            scene.add(train);
+
+            if (points.length > 0) train.position.copy(points[0]);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isRunning && currentIndex < points.length - 1) {
+                const target = points[currentIndex + 1];
+                const direction = new THREE.Vector3().subVectors(target, train.position).normalize();
+
+                // Move train
+                train.position.add(direction.multiplyScalar(speed));
+
+                // Rotate train to look at target
+                train.lookAt(target);
+
+                // UI Updates
+                const dist = train.position.distanceTo(target);
+                if (dist < 0.5) {
+                    currentIndex++;
+                }
+
+                locId.textContent = waypoints[currentIndex].locality || "Deep North";
+                speedId.textContent = (speed * 1000).toFixed(0);
+            }
+
+            // Camera Logic
+            if (train) {
+                if (viewMode === 'follow') {
+                    const relativeCameraOffset = new THREE.Vector3(0, 5, -12);
+                    const cameraOffset = relativeCameraOffset.applyMatrix4(train.matrixWorld);
+                    camera.position.lerp(cameraOffset, 0.1);
+                    camera.lookAt(train.position);
+                } else {
+                    // Cockpit
+                    const relativeCameraOffset = new THREE.Vector3(0, 0.4, 1);
+                    const cameraOffset = relativeCameraOffset.applyMatrix4(train.matrixWorld);
+                    camera.position.copy(cameraOffset);
+
+                    const lookTarget = new THREE.Vector3(0, 0, 5).applyMatrix4(train.matrixWorld);
+                    camera.lookAt(lookTarget);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function parseCSVRow(str) {
+            const arr = [];
+            let quote = false;
+            let col = '';
+            for (let i = 0; i < str.length; i++) {
+                const char = str[i];
+                if (char === '"') quote = !quote;
+                else if (char === ',' && !quote) { arr.push(col.trim()); col = ''; }
+                else col += char;
+            }
+            arr.push(col.trim());
+            return arr;
+        }
+
+        init();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
