@@ -170,9 +170,14 @@
                 createTrain();
 
                 // Load Data asynchronously
-                loadGPSData().catch(e => {
+                loadGPSData().then(() => {
+                    console.log("GPS Data loaded successfully, points:", points.length);
+                    if (points.length === 0) {
+                        locId.textContent = "Error: No GPS points found";
+                    }
+                }).catch(e => {
                     console.error("GPS Load Error:", e);
-                    locId.textContent = "Data Error (CORS/URL)";
+                    locId.textContent = "Load Error: " + e.message;
                 });
 
                 // Event Listeners
@@ -199,33 +204,48 @@
         }
 
         async function loadGPSData() {
+            console.log("Fetching CSV from:", CSV_URL);
             const resp = await fetch(CSV_URL);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
             const text = await resp.text();
-            const rows = text.split('\n').slice(1);
+            console.log("CSV Data received, length:", text.length);
+
+            const rows = text.split('\n').filter(row => row.trim().length > 0).slice(1);
+
+            if (rows.length === 0) throw new Error("CSV file is empty or has no data rows");
 
             const originLat = 18.464717; // First point lat
             const originLon = 99.05675;  // First point lon
 
-            rows.forEach(row => {
+            rows.forEach((row, i) => {
                 const cols = parseCSVRow(row);
-                if (cols.length < 5) return;
+                if (cols.length < 2) return;
 
-                // New CSV Structure: lat,lon,accuracy,source,locality,address,updated
-                const [lat, lon, accuracy, source, locality, address, updated] = cols;
+                const [lat, lon] = cols;
+                const latVal = parseFloat(lat);
+                const lonVal = parseFloat(lon);
 
-                if (lat && lon) {
-                    const x = (parseFloat(lon) - originLon) * SCALE * 0.95; // Longitude to X
-                    const z = -(parseFloat(lat) - originLat) * SCALE;      // Latitude to Z (negative for orientation)
+                if (!isNaN(latVal) && !isNaN(lonVal)) {
+                    const x = (lonVal - originLon) * SCALE * 0.95; // Longitude to X
+                    const z = -(latVal - originLat) * SCALE;      // Latitude to Z
 
                     const pos = new THREE.Vector3(x, 0, z);
                     points.push(pos);
+
+                    // Safe mapping for other cols
+                    const locality = cols[4] || "Route Point";
+                    const updated = cols[6] || "";
                     waypoints.push({ locality, updated, battery: 100 });
                 }
             });
 
+            console.log("Processed points:", points.length);
+            if (points.length < 2) throw new Error("Not enough valid GPS points to create a track (minimum 2 required)");
+
             // Create Visual Track
             const curve = new THREE.CatmullRomCurve3(points);
-            const geometry = new THREE.TubeGeometry(curve, 200, 0.2, 8, false);
+            const geometry = new THREE.TubeGeometry(curve, Math.min(200, points.length * 2), 0.2, 8, false);
             const material = new THREE.MeshStandardMaterial({
                 color: 0x38bdf8,
                 emissive: 0x38bdf8,
@@ -234,6 +254,9 @@
             });
             track = new THREE.Mesh(geometry, material);
             scene.add(track);
+
+            // Set initial train position if it exists
+            if (train && points.length > 0) train.position.copy(points[0]);
         }
 
         function createTrain() {

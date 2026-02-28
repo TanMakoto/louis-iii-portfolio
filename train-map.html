@@ -230,6 +230,7 @@
                 });
 
                 if (points.length > 0) {
+                    console.log("2D Map: Points loaded:", points.length);
                     // Draw Polyline
                     L.polyline(points, {
                         color: '#38bdf8',
@@ -240,6 +241,9 @@
 
                     // Zoom to fit all points
                     map.fitBounds(L.latLngBounds(points));
+                } else {
+                    console.warn("2D Map: No points found in CSV");
+                    throw new Error("No valid GPS points found in data source");
                 }
 
                 document.getElementById('loading').style.opacity = '0';
