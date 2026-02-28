@@ -434,3 +434,47 @@ footer {
         font-size: 2.2rem;
     }
 }
+/* Special Navigation Item */
+.nav-special {
+    background: linear-gradient(135deg, #38bdf8 0%, #39c5bb 100%);
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 20px;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.nav-special:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+    filter: brightness(1.1);
+}
+
+/* Highlight Card */
+.card-highlight {
+    border: 2px solid #38bdf8 !important;
+    background: rgba(56, 189, 248, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-highlight::after {
+    content: 'WORKSHOP';
+    position: absolute;
+    top: 10px;
+    right: -30px;
+    background: #39c5bb;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 40px;
+    transform: rotate(45deg);
+    font-weight: 700;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
