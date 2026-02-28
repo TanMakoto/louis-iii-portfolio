@@ -596,21 +596,40 @@
         }
 
         function simulateOfficial() {
+            logToHUD("REQU: GENERATING REGIONAL SYNC (API BLOCKED)...");
             const samples = [
-                { nickname: "กรมอุตุฯบางนา", pm25: 18, area: "บางนา, กรุงเทพฯ" },
-                { nickname: "รพ.จุฬาฯ", pm25: 22, area: "ปทุมวัน, กรุงเทพฯ" },
-                { nickname: "สถานีเชียงใหม่", pm25: 45, area: "อ.เมือง, เชียงใหม่" }
+                { nickname: "กรมอุตุนิยมวิทยาบางนา", pm25: 18, area: "กรุงเทพมหานคร" },
+                { nickname: "รพ.จุฬาลงกรณ์", pm25: 22, area: "กรุงเทพมหานคร" },
+                { nickname: "สถานีเชียงใหม่ (ต.ช้างเผือก)", pm25: 45, area: "เชียงใหม่" },
+                { nickname: "สถานีขอนแก่น (ต.ในเมือง)", pm25: 28, area: "ขอนแก่น" },
+                { nickname: "สถานีหาดใหญ่", pm25: 12, area: "สงขลา" },
+                { nickname: "สถานีภูเก็ต", pm25: 15, area: "ภูเก็ต" },
+                { nickname: "สถานีชลบุรี (ต.บ้านสวน)", pm25: 35, area: "ชลบุรี" },
+                { nickname: "สถานีระยอง (ต.ท่าประดู่)", pm25: 42, area: "ระยอง" },
+                { nickname: "สถานีนครราชสีมา", pm25: 31, area: "นครราชสีมา" },
+                { nickname: "สถานีกาญจนบุรี", pm25: 19, area: "กาญจนบุรี" },
+                { nickname: "สถานีพิษณุโลก", pm25: 52, area: "พิษณุโลก" },
+                { nickname: "สถานีนครสวรรค์", pm25: 48, area: "นครสวรรค์" },
+                { nickname: "สถานีอุบลราชธานี", pm25: 24, area: "อุบลราชธานี" },
+                { nickname: "สถานีอุดรธานี", pm25: 29, area: "อุดรธานี" },
+                { nickname: "สถานีเชียงราย", pm25: 58, area: "เชียงราย" },
+                { nickname: "สถานีน่าน", pm25: 62, area: "น่าน" },
+                { nickname: "สถานีแม่ฮ่องสอน", pm25: 65, area: "แม่ฮ่องสอน" },
+                { nickname: "สถานีสุราษฎร์ธานี", pm25: 14, area: "สุราษฎร์ธานี" },
+                { nickname: "สถานีกระบี่", pm25: 9, area: "กระบี่" },
+                { nickname: "สถานีนราธิวาส", pm25: 11, area: "นราธิวาส" }
             ];
             samples.forEach((s, i) => {
                 const data = { ...s, id: 'sim-' + i };
                 update3DNode(data, 'official');
-                updateTable(data, 'GISTDA');
+                updateTable(data, 'GISTDA (Sync)');
 
                 // Set as focal if empty
                 if (i === 0 && document.getElementById('focal-name').textContent.includes('Awaiting')) {
-                    updateFocalStation(data, 'Simulated');
+                    updateFocalStation(data, 'Live Simulated');
                 }
             });
+            logToHUD(`SUCC: ${samples.length} STATIONS LOADED VIA FALLBACK`);
         }
 
         function logToHUD(msg) {
