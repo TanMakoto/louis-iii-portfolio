@@ -135,7 +135,7 @@
         let waypoints = [];
         let currentIndex = 0;
         let speed = 0;
-        let maxSpeed = 0.05; // per frame segment
+        let maxSpeed = 0.2; // Up to 200 km/h
         let isRunning = false;
         let viewMode = 'follow'; // 'follow' or 'cockpit'
 
@@ -216,12 +216,18 @@
                 });
 
                 accelBtn.addEventListener('click', () => {
-                    speed = Math.min(speed + 0.01, maxSpeed);
-                    if (!isRunning) startBtn.click(); // Auto-start if accelerating
+                    speed = Math.min(speed + 0.02, maxSpeed); // +20 km/h per click
+                    if (!isRunning) {
+                        isRunning = true;
+                        updateStartButtonUI();
+                    }
                 });
 
                 brakeBtn.addEventListener('click', () => {
-                    speed = Math.max(speed - 0.01, 0);
+                    speed = Math.max(speed - 0.02, 0);
+                    if (speed === 0 && isRunning) {
+                        // Keep running but stalled, or auto-stop? Let's stay running.
+                    }
                 });
 
                 camBtn.addEventListener('click', () => {
@@ -232,9 +238,16 @@
                 kmlInput.addEventListener('change', handleKMLUpload);
 
                 window.addEventListener('keydown', (e) => {
-                    if (e.key.toLowerCase() === 'w') speed = Math.min(speed + 0.005, maxSpeed);
-                    if (e.key.toLowerCase() === 's') speed = Math.max(speed - 0.005, 0);
-                    if (e.key.toLowerCase() === 'c') viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
+                    const key = e.key.toLowerCase();
+                    if (key === 'w') {
+                        speed = Math.min(speed + 0.02, maxSpeed);
+                        if (!isRunning) {
+                            isRunning = true;
+                            updateStartButtonUI();
+                        }
+                    }
+                    if (key === 's') speed = Math.max(speed - 0.02, 0);
+                    if (key === 'c') viewMode = viewMode === 'follow' ? 'cockpit' : 'follow';
                 });
             } catch (err) {
                 console.error("Initialization Error:", err);
@@ -282,6 +295,12 @@
                 }
             };
             reader.readAsText(file);
+        }
+
+        function updateStartButtonUI() {
+            startBtn.textContent = isRunning ? "STOP ENGINE" : "ENGAGE ENGINE";
+            startBtn.style.background = isRunning ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.2)";
+            startBtn.style.borderColor = isRunning ? "#ef4444" : "#38bdf8";
         }
 
         function rebuildRoute(newPoints) {
